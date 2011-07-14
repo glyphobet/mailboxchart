@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+import time
+import datetime
+from mailbox import Maildir, MaildirMessage
+import Image, ImageDraw
+
+white = (0xff, 0xff, 0xff, 0xff)
+black = (0, 0, 0, 0xff)
+grey = (0x40, 0x40, 0x40, 0xff)
+red = (0xff, 0x80, 0x80, 0xff)
+background = grey
+point = white
+
+start = datetime.datetime(2000, 8, 29, 0, 0, 0)
+tomorrow = datetime.date.today() + datetime.timedelta(1)
+end = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, 0)
+
+width = (end-start).days
+height = 24 * 60
+
+scatterplot = Image.new('RGBA', (width, height), background)
+pao = scatterplot.load()
+
+count = 0
+
+dayvolume = [0,] * width
+minutevolume = [0,] * height
+
+print("Reading sent mail and drawing scatterplot")
+
+b = Maildir('Maildir/.Sent/')
+for m in b.itervalues():
+    t = m.getdate_tz('Date')
+    d = datetime.datetime.fromtimestamp(time.mktime(t[:9]))# + t[9])
+    x = (d - start).days
+    y = d.hour * 60 + d.minute
+    pao[x, y] = point
+    dayvolume[x] += 1
+    minutevolume[y] += 1
+    count += 1
+
+print("Drawing day volume plot")
+
+max_per_day = max(dayvolume)
+dayvolumeplot = Image.new('RGBA', (width, max_per_day), white)
+dayvolumedraw = ImageDraw.Draw(dayvolumeplot)
+for x, d in enumerate(dayvolume):
+    dayvolumedraw.line(((x,max_per_day  - d), (x, max_per_day)), fill=red)
+    davg = sum(dayvolume[x-3:x+4]) / 7
+    dayvolumedraw.line(((x,max_per_day  - davg), (x, max_per_day)), fill=background)
+    if d == max_per_day:
+        print d, 'emails sent on', start + datetime.timedelta(x)
+
+print("Drawing minute volume plot")
+
+max_per_min = max(minutevolume)
+minvolumeplot = Image.new('RGBA', (max_per_min, height), white)
+minvolumedraw = ImageDraw.Draw(minvolumeplot)
+for y, m in enumerate(minutevolume):
+    minvolumedraw.line(((0,y), (m, y)), fill=red)
+    mrange = minutevolume[y-5:y+6]
+    if (y<5):
+        mrange = minutevolume[y-5:] + minutevolume[:y+6]
+    if (height-y < 6):
+        mrange += minutevolume[:(y + 6) % height]
+
+    mavg = sum(mrange) / 11
+    minvolumedraw.line(((0,y), (mavg, y)), fill=background)
+
+
+offset = 32
+image = Image.new('RGBA', (width + max_per_min + offset*3, height + max_per_day + offset*3), (0xff, 0xff, 0xff, 0xff))
+image.paste(scatterplot, (offset, offset))
+image.paste(dayvolumeplot, (offset, height + offset*2))
+image.paste(minvolumeplot, (offset * 2 + width, offset))
+
+d = ImageDraw.Draw(image)
+
+y = start.year + 1
+while y <= end.year:
+    x = (datetime.datetime(y, 1, 1) - start).days + offset
+    d.line(((x, 0              ), (x,          offset  )), fill=black)
+    d.line(((x, height + offset), (x, height + offset*2)), fill=black)
+
+    ts = d.textsize(str(y))
+    d.text((x+182 - ts[0]/2,          offset / 2   - ts[1]/2), str(y), fill=black)
+    d.text((x+182 - ts[0]/2, height + offset * 1.5 - ts[1]/2), str(y), fill=black)
+    y += 1
+
+for h in xrange(25):
+    y = offset+h*60
+    d.line(((0             , y), (offset          , y)), fill=black)
+    d.line(((width + offset, y), (width + offset*2, y)), fill=black)
+    if h == 24:
+        break
+    hour = str((h-1) % 12 + 1)
+    ts = d.textsize(hour)
+    d.text((        offset*0.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black)
+    d.text((width + offset*1.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black)
+
+image.save('public_html/sentmail.png')
+print count, "emails sent."
