@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 import time
 import datetime
 from mailbox import Maildir, MaildirMessage
@@ -6,7 +7,7 @@ import Image, ImageDraw
 
 # Config
 maildir_path = '~/Maildir/.Sent/'
-output_path = '/home/matt/public_html/sentmail.png'
+output_path = 'mailboxchart.png'
 white = (0xff, 0xff, 0xff, 0xff)
 black = (0, 0, 0, 0xff)
 grey = (0x40, 0x40, 0x40, 0xff)
@@ -26,7 +27,7 @@ try:
     start = display_timezone.localize(start)
     end = display_timezone.localize(end)
 except ImportError:
-    sys.stderr.write("Install pytz (http://pytz.sourceforge.net/) for timezone-aware charts.")
+    sys.stderr.write("Install pytz (http://pytz.sourceforge.net/) for timezone-aware charts.\n")
 
 # end Config
 
