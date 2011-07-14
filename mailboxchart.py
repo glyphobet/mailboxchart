@@ -4,6 +4,9 @@ import datetime
 from mailbox import Maildir, MaildirMessage
 import Image, ImageDraw
 
+# Config
+maildir_path = '~/Maildir/.Sent/'
+output_path = '/home/matt/public_html/sentmail.png'
 white = (0xff, 0xff, 0xff, 0xff)
 black = (0, 0, 0, 0xff)
 grey = (0x40, 0x40, 0x40, 0xff)
@@ -14,6 +17,18 @@ point = white
 start = datetime.datetime(2000, 8, 29, 0, 0, 0)
 tomorrow = datetime.date.today() + datetime.timedelta(1)
 end = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, 0)
+
+display_timezone_name = 'America/Los_Angeles'
+display_timezone = None
+try:
+    from pytz import timezone, utc
+    display_timezone = timezone(display_timezone_name)
+    start = display_timezone.localize(start)
+    end = display_timezone.localize(end)
+except ImportError:
+    sys.stderr.write("Install pytz (http://pytz.sourceforge.net/) for timezone-aware charts.")
+
+# end Config
 
 width = (end-start).days
 height = 24 * 60
@@ -28,10 +43,12 @@ minutevolume = [0,] * height
 
 print("Reading sent mail and drawing scatterplot")
 
-b = Maildir('Maildir/.Sent/')
+b = Maildir(maildir_path)
 for m in b.itervalues():
     t = m.getdate_tz('Date')
-    d = datetime.datetime.fromtimestamp(time.mktime(t[:9]))# + t[9])
+    d = datetime.datetime.fromtimestamp(time.mktime(t[:9])) - datetime.timedelta(seconds=t[9])
+    if display_timezone is not None:
+        d = utc.localize(d).astimezone(display_timezone)
     x = (d - start).days
     y = d.hour * 60 + d.minute
     pao[x, y] = point
@@ -78,7 +95,10 @@ d = ImageDraw.Draw(image)
 
 y = start.year + 1
 while y <= end.year:
-    x = (datetime.datetime(y, 1, 1) - start).days + offset
+    year = datetime.datetime(y, 1, 1)
+    if display_timezone is not None:
+        year = utc.localize(year).astimezone(display_timezone)
+    x = (year - start).days + offset
     d.line(((x, 0              ), (x,          offset  )), fill=black)
     d.line(((x, height + offset), (x, height + offset*2)), fill=black)
 
@@ -98,5 +118,5 @@ for h in xrange(25):
     d.text((        offset*0.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black)
     d.text((width + offset*1.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black)
 
-image.save('public_html/sentmail.png')
+image.save(output_path)
 print count, "emails sent."
