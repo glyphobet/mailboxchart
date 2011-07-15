@@ -35,7 +35,7 @@ try:
     start = display_timezone.localize(start)
     end = display_timezone.localize(end)
 except ImportError:
-    sys.stderr.write("Install pytz (http://pytz.sourceforge.net/) for timezone-aware charts.\n")
+    print("Install pytz (http://pytz.sourceforge.net/) for timezone-aware charts.\n")
 
 # end Config
 
@@ -135,4 +135,4 @@ for h in xrange(25):
     d.text((width + offset*1.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black, font=font)
 
 image.save(output_path)
-print count, "emails sent."
+print("%d total emails sent." % count)
