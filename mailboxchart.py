@@ -2,20 +2,67 @@
 import sys
 import time
 import datetime
+from copy import copy
+# Move to argparse when moving to Python 2.7
+from optparse import OptionParser, Option, OptionValueError
 from mailbox import Maildir, MaildirMessage
 import Image, ImageDraw, ImageFont
 
-# Config
-maildir_path = '~/Maildir/.Sent/'
-output_path = 'mailboxchart.png'
+# Parse options
+def check_date(option, opt, value):
+    try:
+        return datetime.datetime.strptime(value, '%Y-%m-%d')
+    except ValueError:
+        raise OptionValueError("option %s: invalid date format: %r" % (opt, value))
 
-font_path = '/home/matt/fonts/downloaded/inconsolata.otf'
-font_size = 24
-if font_path is not None:
-    font = ImageFont.truetype(font_path, font_size)
+
+class DateOption(Option):
+    TYPES = Option.TYPES + ('date',)
+    TYPE_CHECKER = copy(Option.TYPE_CHECKER)
+    TYPE_CHECKER['date'] = check_date
+
+
+parser = OptionParser(option_class=DateOption)
+parser.add_option('-o', '--output'  , dest='output_path'     , default='mailboxchart.png')
+parser.add_option('-f', '--font'    , dest='font_path'                                   )
+parser.add_option(      '--fontsize', dest='font_size'       , default=24  , type=int    )
+parser.add_option('-s', '--start'   , dest='start'           , default=None, type='date' )
+parser.add_option('-e', '--end'     , dest='end'             , default=None, type='date' )
+parser.add_option('-z', '--timezone', dest='display_timezone', default=None              )
+
+(options, args) = parser.parse_args()
+
+if not args:
+    sys.exit("At least one maildir is required")
+    
+# Manage options
+if options.font_path is not None:
+    font = ImageFont.truetype(options.font_path, options.font_size)
 else:
     font = ImageFont.load_default()
 
+if not options.start:
+    sys.exit('-s option for start date in YYYY-MM-DD format is required')
+
+start = options.start
+if not options.end:
+    tomorrow = datetime.date.today() + datetime.timedelta(1)
+    end = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, 0)
+else:
+    end = options.end
+
+display_timezone = None
+if options.display_timezone:
+    try:
+        from pytz import timezone, utc
+        display_timezone = timezone(options.display_timezone)
+        start = display_timezone.localize(start)
+        end = display_timezone.localize(end)
+    except ImportError:
+        print("Install pytz (http://pytz.sourceforge.net/) for timezone-aware charts.\n")
+
+
+# Colors
 white = (0xff, 0xff, 0xff, 0xff)
 black = (0, 0, 0, 0xff)
 grey = (0x40, 0x40, 0x40, 0xff)
@@ -23,21 +70,6 @@ red = (0xff, 0x80, 0x80, 0xff)
 background = grey
 point = white
 
-start = datetime.datetime(2000, 8, 29, 0, 0, 0)
-tomorrow = datetime.date.today() + datetime.timedelta(1)
-end = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, 0)
-
-display_timezone_name = 'America/Los_Angeles'
-display_timezone = None
-try:
-    from pytz import timezone, utc
-    display_timezone = timezone(display_timezone_name)
-    start = display_timezone.localize(start)
-    end = display_timezone.localize(end)
-except ImportError:
-    print("Install pytz (http://pytz.sourceforge.net/) for timezone-aware charts.\n")
-
-# end Config
 
 width = (end - start).days + 1
 height = 24 * 60
@@ -50,25 +82,27 @@ count = 0
 dayvolume = [0,] * width
 minutevolume = [0,] * height
 
-print("Reading sent mail and drawing scatterplot")
+print("Drawing scatterplot")
 
-b = Maildir(maildir_path)
-for m in b.itervalues():
-    t = m.getdate_tz('Date')
-    d = datetime.datetime.fromtimestamp(time.mktime(t[:9])) - datetime.timedelta(seconds=t[9])
-    if display_timezone is not None:
-        d = utc.localize(d).astimezone(display_timezone)
-    if d < start:
-        continue
-    x = (d - start).days
-    y = d.hour * 60 + d.minute
-    try:
-        pao[x, y] = point
-    except:
-        print x, y, width, height
-    dayvolume[x] += 1
-    minutevolume[y] += 1
-    count += 1
+for maildir_path in args:
+    print('Reading messages in "%s"' % maildir_path)
+    b = Maildir(maildir_path)
+    for m in b.itervalues():
+        t = m.getdate_tz('Date')
+        d = datetime.datetime.fromtimestamp(time.mktime(t[:9])) - datetime.timedelta(seconds=t[9])
+        if display_timezone is not None:
+            d = utc.localize(d).astimezone(display_timezone)
+        if d < start or d > end:
+            continue
+        x = (d - start).days
+        y = d.hour * 60 + d.minute
+        try:
+            pao[x, y] = point
+        except:
+            print x, y, width, height
+        dayvolume[x] += 1
+        minutevolume[y] += 1
+        count += 1
 
 print("Drawing day volume plot")
 
@@ -138,5 +172,5 @@ for h in xrange(25):
     d.text((        offset*0.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black, font=font)
     d.text((width + offset*1.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black, font=font)
 
-image.save(output_path)
+image.save(options.output_path)
 print("%d total emails sent." % count)
