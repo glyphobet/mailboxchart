@@ -144,18 +144,21 @@ image.paste(minvolumeplot, (offset * 2 + width, offset))
 d = ImageDraw.Draw(image)
 
 # Draw ticks and labels for years
-y = start.year + 1
+y = start.year
 while y <= end.year:
     year = datetime.datetime(y, 1, 1)
     if display_timezone is not None:
         year = utc.localize(year).astimezone(display_timezone)
     x = (year - start).days + offset
-    d.line(((x, 0              ), (x,          offset  )), fill=black)
-    d.line(((x, height + offset), (x, height + offset*2)), fill=black)
-
+    if offset <= x <= width:
+        d.line(((x, 0              ), (x,          offset  )), fill=black)
+        d.line(((x, height + offset), (x, height + offset*2)), fill=black)
     ts = font.getsize(str(y))
-    d.text((x+182 - ts[0]/2,          offset / 2   - ts[1]/2), str(y), fill=black, font=font)
-    d.text((x+182 - ts[0]/2, height + offset * 1.5 - ts[1]/2), str(y), fill=black, font=font)
+    x += 182
+    if offset <= x - ts[0]/2 and x + ts[0]/2 <= width:
+        print y, offset, x - ts[0]/2, x + ts[0]/2, width
+        d.text((x - ts[0]/2,          offset / 2   - ts[1]/2), str(y), fill=black, font=font)
+        d.text((x - ts[0]/2, height + offset * 1.5 - ts[1]/2), str(y), fill=black, font=font)
     y += 1
 
 # Draw ticks and labels for minutes
