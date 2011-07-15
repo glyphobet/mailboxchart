@@ -10,7 +10,7 @@ maildir_path = '~/Maildir/.Sent/'
 output_path = 'mailboxchart.png'
 
 font_path = '/home/matt/fonts/downloaded/inconsolata.otf'
-font_size = 15
+font_size = 24
 if font_path is not None:
     font = ImageFont.truetype(font_path, font_size)
 else:
