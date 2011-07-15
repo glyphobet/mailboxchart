@@ -58,6 +58,8 @@ for m in b.itervalues():
     d = datetime.datetime.fromtimestamp(time.mktime(t[:9])) - datetime.timedelta(seconds=t[9])
     if display_timezone is not None:
         d = utc.localize(d).astimezone(display_timezone)
+    if d < start:
+        continue
     x = (d - start).days
     y = d.hour * 60 + d.minute
     try:
