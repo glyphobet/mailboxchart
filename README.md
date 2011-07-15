@@ -19,7 +19,7 @@ Requires Python 2.6 or greater. Optionally, for timezone-corrected charts, the p
 Usage
 -----
 
-    ./mailboxchart.py -s 2001-01-01 path/to/maildir/ [path/to/other/maildir [...]]
+    ./mailboxchart.py -s 2001-01-01 [OPTIONS] path/to/maildir/ [path/to/other/maildir/ [...]]
 
 Since Python's Maildir object returns messages un-sorted, you must supply a start date on the command line, using the `-s` option. All other command line options are optional.
 
@@ -42,6 +42,6 @@ Since Python's Maildir object returns messages un-sorted, you must supply a star
 
 ### Example ###
 
-I've had the same email since August 29th, 2000, and I'm usually in the `America/Los_Angeles` timezone, so I use this command:
+I've had the same email since August 29th, 2000, and I'm usually in the `America/Los_Angeles` timezone, and my sent-mail is in ~/Maildir/.Sent/, so I use this command:
 
-   ./mailboxchart.py -z America/Los_Angeles -s 2000-08-29 ~/Maildir/.Sent/
+    ./mailboxchart.py -s 2000-08-29 -z America/Los_Angeles ~/Maildir/.Sent/
