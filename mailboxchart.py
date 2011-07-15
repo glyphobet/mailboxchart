@@ -30,7 +30,7 @@ parser.add_option('-f', '--font'    , dest='font_path'       ,
 parser.add_option(      '--fontsize', dest='font_size'       , default=24  , type=int   ,
     help="font size, in pixels (requires that -f FONT is specified)")
 parser.add_option('-s', '--start'   , dest='start'           , default=None, type='date',
-    help="process emails starting on this date")
+    help="process emails starting on this date (required)")
 parser.add_option('-e', '--end'     , dest='end'             , default=None, type='date',
     help="process emails before this date")
 parser.add_option('-z', '--timezone', dest='display_timezone', default=None,
