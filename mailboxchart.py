@@ -99,14 +99,17 @@ for y, m in enumerate(minutevolume):
     minvolumedraw.line(((0,y), (mavg, y)), fill=background)
 
 
+# Composite scatter and volume plots together
 offset = 32
 image = Image.new('RGBA', (width + max_per_min + offset*3, height + max_per_day + offset*3), (0xff, 0xff, 0xff, 0xff))
 image.paste(scatterplot, (offset, offset))
 image.paste(dayvolumeplot, (offset, height + offset*2))
 image.paste(minvolumeplot, (offset * 2 + width, offset))
 
+
 d = ImageDraw.Draw(image)
 
+# Draw ticks and labels for years
 y = start.year + 1
 while y <= end.year:
     year = datetime.datetime(y, 1, 1)
@@ -121,6 +124,7 @@ while y <= end.year:
     d.text((x+182 - ts[0]/2, height + offset * 1.5 - ts[1]/2), str(y), fill=black, font=font)
     y += 1
 
+# Draw ticks and labels for minutes
 for h in xrange(25):
     y = offset+h*60
     if h == 24:
