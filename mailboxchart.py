@@ -3,11 +3,19 @@ import sys
 import time
 import datetime
 from mailbox import Maildir, MaildirMessage
-import Image, ImageDraw
+import Image, ImageDraw, ImageFont
 
 # Config
 maildir_path = '~/Maildir/.Sent/'
 output_path = 'mailboxchart.png'
+
+font_path = '/home/matt/fonts/downloaded/inconsolata.otf'
+font_size = 15
+if font_path is not None:
+    font = ImageFont.truetype(font_path, font_size)
+else:
+    font = ImageFont.load_default()
+
 white = (0xff, 0xff, 0xff, 0xff)
 black = (0, 0, 0, 0xff)
 grey = (0x40, 0x40, 0x40, 0xff)
@@ -31,7 +39,7 @@ except ImportError:
 
 # end Config
 
-width = (end-start).days
+width = (end - start).days + 1
 height = 24 * 60
 
 scatterplot = Image.new('RGBA', (width, height), background)
@@ -52,7 +60,10 @@ for m in b.itervalues():
         d = utc.localize(d).astimezone(display_timezone)
     x = (d - start).days
     y = d.hour * 60 + d.minute
-    pao[x, y] = point
+    try:
+        pao[x, y] = point
+    except:
+        print x, y, width, height
     dayvolume[x] += 1
     minutevolume[y] += 1
     count += 1
@@ -103,9 +114,9 @@ while y <= end.year:
     d.line(((x, 0              ), (x,          offset  )), fill=black)
     d.line(((x, height + offset), (x, height + offset*2)), fill=black)
 
-    ts = d.textsize(str(y))
-    d.text((x+182 - ts[0]/2,          offset / 2   - ts[1]/2), str(y), fill=black)
-    d.text((x+182 - ts[0]/2, height + offset * 1.5 - ts[1]/2), str(y), fill=black)
+    ts = font.getsize(str(y))
+    d.text((x+182 - ts[0]/2,          offset / 2   - ts[1]/2), str(y), fill=black, font=font)
+    d.text((x+182 - ts[0]/2, height + offset * 1.5 - ts[1]/2), str(y), fill=black, font=font)
     y += 1
 
 for h in xrange(25):
@@ -115,9 +126,9 @@ for h in xrange(25):
     if h == 24:
         break
     hour = str((h-1) % 12 + 1)
-    ts = d.textsize(hour)
-    d.text((        offset*0.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black)
-    d.text((width + offset*1.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black)
+    ts = font.getsize(hour)
+    d.text((        offset*0.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black, font=font)
+    d.text((width + offset*1.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black, font=font)
 
 image.save(output_path)
 print count, "emails sent."
