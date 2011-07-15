@@ -59,7 +59,7 @@ if options.display_timezone:
         start = display_timezone.localize(start)
         end = display_timezone.localize(end)
     except ImportError:
-        print("Install pytz (http://pytz.sourceforge.net/) for timezone-aware charts.\n")
+        print("Install pytz (http://pytz.sourceforge.net/) for timezone-aware charts.")
 
 
 # Colors
