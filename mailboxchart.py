@@ -121,6 +121,8 @@ while y <= end.year:
 
 for h in xrange(25):
     y = offset+h*60
+    if h == 24:
+        y -= 1
     d.line(((0             , y), (offset          , y)), fill=black)
     d.line(((width + offset, y), (width + offset*2, y)), fill=black)
     if h == 24:
