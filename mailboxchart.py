@@ -96,10 +96,7 @@ for maildir_path in args:
             continue
         x = (d - start).days
         y = d.hour * 60 + d.minute
-        try:
-            pao[x, y] = point
-        except:
-            print x, y, width, height
+        pao[x, y] = point
         dayvolume[x] += 1
         minutevolume[y] += 1
         count += 1
@@ -156,7 +153,6 @@ while y <= end.year:
     ts = font.getsize(str(y))
     x += 182
     if offset <= x - ts[0]/2 and x + ts[0]/2 <= width:
-        print y, offset, x - ts[0]/2, x + ts[0]/2, width
         d.text((x - ts[0]/2,          offset / 2   - ts[1]/2), str(y), fill=black, font=font)
         d.text((x - ts[0]/2, height + offset * 1.5 - ts[1]/2), str(y), fill=black, font=font)
     y += 1
