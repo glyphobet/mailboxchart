@@ -42,6 +42,6 @@ Since Python's Maildir object returns messages un-sorted, you must supply a star
 
 ### Example ###
 
-I've had the same email since August 29th, 2000, and I'm usually in the `America/Los_Angeles` timezone, and my sent-mail is in ~/Maildir/.Sent/, so I use this command:
+I've had the same email since August 29th, 2000, and I'm usually in the `America/Los_Angeles` timezone, and my sent-mail is in `~/Maildir/.Sent/`, so I use this command:
 
     ./mailboxchart.py -s 2000-08-29 -z America/Los_Angeles ~/Maildir/.Sent/
