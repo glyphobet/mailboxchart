@@ -6,6 +6,7 @@ from copy import copy
 # Move to argparse when moving to Python 2.7
 from optparse import OptionParser, Option, OptionValueError
 from mailbox import Maildir, MaildirMessage
+import imaplib, getpass
 import Image, ImageDraw, ImageFont
 
 # Parse options
@@ -91,12 +92,43 @@ minutevolume = [0,] * height
 
 print("Drawing scatterplot")
 
-for maildir_path in args:
-    print('Reading messages in "%s"' % maildir_path)
-    b = Maildir(maildir_path)
+
+def iterate_maildir(maildir):
+    b = Maildir(maildir)
     for m in b.itervalues():
         t = m.getdate_tz('Date')
         d = datetime.datetime.fromtimestamp(time.mktime(t[:9])) - datetime.timedelta(seconds=t[9])
+        yield d
+
+
+def iterate_gmail(email):
+    return iterate_imap(email, 'imap.gmail.com', '"[Gmail]/Sent Mail"')
+
+
+def iterate_imap(email, host, mailbox):
+    imap_mailbox = imaplib.IMAP4_SSL(host)
+    imap_mailbox.login(email, getpass.getpass("Password for %s: " % email))
+    imap_mailbox.select(mailbox, True)
+    typ, data = imap_mailbox.search(None, 'ALL')
+    for num in data[0].split():
+        typ, data = imap_mailbox.fetch(num, '(INTERNALDATE)')
+        date_str = data[0].split('"')[1]
+        d = datetime.datetime.strptime(date_str, '%d-%b-%Y %H:%M:%S +0000')
+        yield d
+    imap_mailbox.close()
+    imap_mailbox.logout()
+
+
+def iterate_item(item):
+    if item.endswith('@gmail.com'):
+        return iterate_gmail(item)
+    else:
+        return iterate_maildir(item)
+
+
+for item in args:
+    print('Reading messages in "%s"' % item)
+    for d in iterate_item(item):
         if display_timezone is not None:
             d = utc.localize(d).astimezone(display_timezone)
         if d < start or d > end:
