@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import division
 import sys
 import time
 import datetime
@@ -36,6 +37,8 @@ parser.add_option('-e', '--end'     , dest='end'             , default=None, typ
     help="process emails before this date")
 parser.add_option('-z', '--timezone', dest='display_timezone', default=None,
     help="draw chart using this timezone (requires the pytz module: http://pytz.sourceforge.net/)")
+parser.add_option('-q', '--quiet'   , dest='quiet'           , default=False, type=bool,
+    help="quiet operation")
 
 (options, args) = parser.parse_args()
 
@@ -85,7 +88,7 @@ height = 24 * 60
 scatterplot = Image.new('RGBA', (width, height), background)
 pao = scatterplot.load()
 
-count = 0
+total_count = 0
 
 dayvolume = [0,] * width
 minutevolume = [0,] * height
@@ -95,10 +98,12 @@ print("Drawing scatterplot")
 
 def iterate_maildir(maildir):
     b = Maildir(maildir)
-    for m in b.itervalues():
-        t = m.getdate_tz('Date')
-        d = datetime.datetime.fromtimestamp(time.mktime(t[:9])) - datetime.timedelta(seconds=t[9])
-        yield d
+    def iter():
+        for m in b.itervalues():
+            t = m.getdate_tz('Date')
+            d = datetime.datetime.fromtimestamp(time.mktime(t[:9])) - datetime.timedelta(seconds=t[9])
+            yield d
+    return len(b), iter()
 
 
 def iterate_gmail(email):
@@ -111,13 +116,15 @@ def iterate_imap(email, host, mailbox):
     imap_mailbox.select(mailbox, True)
     typ, data = imap_mailbox.search(None, 'ALL')
     message_ids = data[0].split()
-    for mid in message_ids:
-        typ, data = imap_mailbox.fetch(mid, '(INTERNALDATE)')
-        date_str = data[0].split('"')[1]
-        d = datetime.datetime.strptime(date_str, '%d-%b-%Y %H:%M:%S +0000')
-        yield d
-    imap_mailbox.close()
-    imap_mailbox.logout()
+    def iter():
+        for mid in message_ids:
+            typ, data = imap_mailbox.fetch(mid, '(INTERNALDATE)')
+            date_str = data[0].split('"')[1]
+            d = datetime.datetime.strptime(date_str, '%d-%b-%Y %H:%M:%S +0000')
+            yield d
+        imap_mailbox.close()
+        imap_mailbox.logout()
+    return len(message_ids), iter()
 
 
 def iterate_item(item):
@@ -129,7 +136,9 @@ def iterate_item(item):
 
 for item in args:
     print('Reading messages in "%s"' % item)
-    for d in iterate_item(item):
+    length, items = iterate_item(item)
+    count = 0
+    for d in items:
         if display_timezone is not None:
             d = utc.localize(d).astimezone(display_timezone)
         if d < start or d > end:
@@ -139,7 +148,18 @@ for item in args:
         pao[x, y] = point
         dayvolume[x] += 1
         minutevolume[y] += 1
+
+        if not options.quiet:
+            sys.stdout.write((chr(27)+chr(91)+chr(68))*3)
+            sys.stdout.write('{0:0=3.0%}'.format(count/length))
+            sys.stdout.flush()
+
         count += 1
+        total_count += 1
+
+    if not options.quiet:
+        sys.stdout.write('\n')
+
 
 print("Drawing day volume plot")
 
@@ -212,4 +232,4 @@ for h in xrange(25):
     d.text((width + offset*1.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black, font=font)
 
 image.save(options.output_path)
-print("%d total emails sent." % count)
+print("%d total emails sent." % total_count)
