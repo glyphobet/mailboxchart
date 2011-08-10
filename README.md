@@ -42,7 +42,7 @@ Since mailboxes might contain un-sorted messages, you must supply a start date o
     -e END, --end=END     process emails before this date
     -z DISPLAY_TIMEZONE, --timezone=DISPLAY_TIMEZONE
                           draw chart using this timezone
-    --noninteractive,     disable progress meter
+    --noninteractive      disable progress meter
 
 
 ### Example ###
