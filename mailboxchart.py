@@ -169,7 +169,7 @@ for x, d in enumerate(dayvolume):
     davg = sum(dayvolume[x-3:x+4]) / 7
     dayvolumedraw.line(((x,max_per_day  - davg), (x, max_per_day)), fill=background)
     if d == max_per_day:
-        print d, 'emails sent on', start + datetime.timedelta(x)
+        print(d, 'emails sent on', start + datetime.timedelta(x))
 
 print("Drawing minute volume plot")
 
