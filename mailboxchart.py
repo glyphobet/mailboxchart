@@ -116,7 +116,7 @@ def iterate_imap(account, host, mailbox):
         return 0, []
     message_ids = data[0].split()
     def iter():
-        with imap_closer(imap_mailbox)
+        with imap_closer(imap_mailbox):
             for mid in message_ids:
                 typ, data = imap_mailbox.fetch(mid, '(INTERNALDATE)')
                 date_str = data[0].split('"')[1]
