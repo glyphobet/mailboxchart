@@ -37,7 +37,7 @@ parser.add_option('-e', '--end'     , dest='end'             , default=None, typ
     help="process emails before this date")
 parser.add_option('-z', '--timezone', dest='display_timezone', default=None,
     help="draw chart using this timezone (requires the pytz module: http://pytz.sourceforge.net/)")
-parser.add_option('-q', '--quiet'   , dest='quiet'           , default=False, type=bool,
+parser.add_option('-q', '--quiet'   , dest='quiet'           , action='store_true',
     help="quiet operation")
 
 (options, args) = parser.parse_args()
