@@ -7,7 +7,8 @@ from copy import copy
 # Move to argparse when moving to Python 2.7
 from optparse import OptionParser, Option, OptionValueError
 from mailbox import Maildir, MaildirMessage
-import imaplib, getpass
+from imaplib import IMAP4_SSL
+import getpass
 import Image, ImageDraw, ImageFont
 
 # Parse options
@@ -37,14 +38,16 @@ parser.add_option('-e', '--end'     , dest='end'             , default=None, typ
     help="process emails before this date")
 parser.add_option('-z', '--timezone', dest='display_timezone', default=None,
     help="draw chart using this timezone (requires the pytz module: http://pytz.sourceforge.net/)")
-parser.add_option('-q', '--quiet'   , dest='quiet'           , action='store_true',
-    help="quiet operation")
+parser.add_option('--noninteractive', dest='interactive'     , default=True, action='store_false',
+    help="disable progress meter")
+
 
 (options, args) = parser.parse_args()
 
+
 if not args:
     sys.exit("At least one maildir is required")
-    
+
 # Manage options
 if options.font_path is not None:
     font = ImageFont.truetype(options.font_path, options.font_size)
@@ -60,6 +63,7 @@ if not options.end:
     end = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, 0)
 else:
     end = options.end
+
 
 display_timezone = None
 if options.display_timezone:
@@ -108,12 +112,12 @@ def iterate_maildir(maildir):
 
 def iterate_imap(account, host, mailbox):
     try:
-        imap_mailbox = imaplib.IMAP4_SSL(host)
+        imap_mailbox = IMAP4_SSL(host)
         imap_mailbox.login(account, getpass.getpass("Password for %s: " % account))
         imap_mailbox.select(mailbox, True)
         typ, data = imap_mailbox.search(None, 'ALL')
-    except imaplib.error, e:
-        print(e)
+    except IMAP4_SSL.error, e:
+        sys.stderr.write(str(e) + '\n')
         return 0, []
     message_ids = data[0].split()
     def iter():
@@ -151,14 +155,14 @@ def process_item(item):
         dayvolume[x] += 1
         minutevolume[y] += 1
 
-        if not options.quiet:
-            sys.stdout.write((chr(27)+chr(91)+chr(68))*3)
+        if options.interactive:
+            sys.stdout.write((chr(27)+chr(91)+chr(68))*4)
             sys.stdout.write('{0:0=3.0%}'.format(count/length))
             sys.stdout.flush()
 
         count += 1
 
-    if not options.quiet:
+    if options.interactive:
         sys.stdout.write('\n')
 
     return count
@@ -177,7 +181,7 @@ for x, d in enumerate(dayvolume):
     davg = sum(dayvolume[x-3:x+4]) / 7
     dayvolumedraw.line(((x,max_per_day  - davg), (x, max_per_day)), fill=background)
     if d == max_per_day:
-        print(d, 'emails sent on', start + datetime.timedelta(x))
+        print('%d emails sent on %d' % (d, start + datetime.timedelta(x)))
 
 print("Drawing minute volume plot")
 
