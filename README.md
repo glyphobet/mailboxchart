@@ -21,7 +21,7 @@ Usage
 
     ./mailboxchart.py -s 2001-01-01 [OPTIONS] maildir_or_imaps_url [maildir_or_imaps_url [...]]
 
-You may process as many Maildirs or IMAP4 mailboxes as you like, using a single command, and all the mails will be assembled on the same chart. You'll be prompted for IMAP passwords for each IMAP url. 
+You may process as many Maildirs or IMAP4 mailboxes as you like, using a single command, and all the mails will be assembled on the same chart. You'll be prompted for IMAP passwords for each IMAP URL.
 
 Only IMAP4 over SSL is supported. (If you really want to send your authentication and entire mailbox unencrypted over the Internets you can hack the code easily enough, but I'm not going to enable you.)
 
@@ -51,7 +51,7 @@ I've had the same email since August 29th, 2000, and I'm usually in the `America
 
     ./mailboxchart.py -s 2000-08-29 -z America/Los_Angeles ~/Maildir/.Sent/
 
-Alternatively, if you'd like to process a remote Gmail mailbox over IMAP4, you may supply an imaps:// URL like this:
+Alternatively, if you'd like to process a remote Gmail mailbox over IMAP4, you may supply an `imaps://` URL like this:
 
     ./mailboxchart.py -s 2001-01-01 'imaps://USERNAME@imap.gmail.com/"[Gmail]/Sent Mail"'
 
