@@ -3,6 +3,7 @@ from __future__ import division
 import sys
 import time
 import datetime
+import urllib
 from copy import copy
 from contextlib import contextmanager
 # Move to argparse when moving to Python 2.7
@@ -96,6 +97,7 @@ def parse_item(item):
     if item.startswith('imaps://'):
         protocol, empty, email, mailbox = item.split('/', 3)
         account, host = email.split('@', 1)
+        account = urllib.unquote(account)
         return process_imap(account, host, mailbox)
     else:
         return process_maildir(item)

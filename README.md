@@ -51,7 +51,7 @@ I've had the same email since August 29th, 2000, and I'm usually in the `America
 
     ./mailboxchart.py -s 2000-08-29 -z America/Los_Angeles ~/Maildir/.Sent/
 
-Alternatively, if you'd like to process a remote Gmail mailbox over IMAP4, you may supply an `imaps://` URL like this:
+Alternatively, if you'd like to process a remote Gmail mailbox over IMAP4, you may supply an `imaps://` URL. (Note that `USERNAME` must be URL-encoded, so if it has an `@` sign in it, that gets turned into `%40`.)
 
     ./mailboxchart.py -s 2001-01-01 'imaps://USERNAME@imap.gmail.com/"[Gmail]/Sent Mail"'
 
