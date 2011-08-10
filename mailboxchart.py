@@ -4,6 +4,7 @@ import sys
 import time
 import datetime
 from copy import copy
+from contextlib import contextmanager
 # Move to argparse when moving to Python 2.7
 from optparse import OptionParser, Option, OptionValueError
 from mailbox import Maildir, MaildirMessage
@@ -97,6 +98,13 @@ def iterate_maildir(maildir):
     return len(b), iter()
 
 
+@contextmanager
+def imap_closer(imap_mailbox):
+    yield
+    imap_mailbox.close()
+    imap_mailbox.logout()
+
+
 def iterate_imap(account, host, mailbox):
     try:
         imap_mailbox = IMAP4_SSL(host)
@@ -108,13 +116,12 @@ def iterate_imap(account, host, mailbox):
         return 0, []
     message_ids = data[0].split()
     def iter():
-        for mid in message_ids:
-            typ, data = imap_mailbox.fetch(mid, '(INTERNALDATE)')
-            date_str = data[0].split('"')[1]
-            d = datetime.datetime.strptime(date_str, '%d-%b-%Y %H:%M:%S +0000')
-            yield d
-        imap_mailbox.close()
-        imap_mailbox.logout()
+        with imap_closer(imap_mailbox)
+            for mid in message_ids:
+                typ, data = imap_mailbox.fetch(mid, '(INTERNALDATE)')
+                date_str = data[0].split('"')[1]
+                d = datetime.datetime.strptime(date_str, '%d-%b-%Y %H:%M:%S +0000')
+                yield d
     return len(message_ids), iter()
 
 
