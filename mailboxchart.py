@@ -106,13 +106,9 @@ def iterate_maildir(maildir):
     return len(b), iter()
 
 
-def iterate_gmail(email):
-    return iterate_imap(email, 'imap.gmail.com', '"[Gmail]/Sent Mail"')
-
-
-def iterate_imap(email, host, mailbox):
+def iterate_imap(account, host, mailbox):
     imap_mailbox = imaplib.IMAP4_SSL(host)
-    imap_mailbox.login(email, getpass.getpass("Password for %s: " % email))
+    imap_mailbox.login(account, getpass.getpass("Password for %s: " % account))
     imap_mailbox.select(mailbox, True)
     typ, data = imap_mailbox.search(None, 'ALL')
     message_ids = data[0].split()
@@ -128,14 +124,16 @@ def iterate_imap(email, host, mailbox):
 
 
 def iterate_item(item):
-    if item.endswith('@gmail.com'):
-        return iterate_gmail(item)
+    if item.startswith('imaps://'):
+        protocol, empty, email, mailbox = item.split('/', 3)
+        account, host = email.split('@', 1)
+        return iterate_imap(account, host, mailbox)
     else:
         return iterate_maildir(item)
 
 
 for item in args:
-    print('Reading messages in "%s"' % item)
+    print('Reading messages in %r' % item)
     length, items = iterate_item(item)
     count = 0
     for d in items:
