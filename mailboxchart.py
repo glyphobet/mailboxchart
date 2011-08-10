@@ -86,19 +86,6 @@ background = purple
 point = white
 
 
-width = (end - start).days + 1
-height = 24 * 60
-
-scatterplot = Image.new('RGBA', (width, height), background)
-pao = scatterplot.load()
-
-total_count = 0
-
-dayvolume = [0,] * width
-minutevolume = [0,] * height
-
-print("Drawing scatterplot")
-
 
 def iterate_maildir(maildir):
     b = Maildir(maildir)
@@ -168,6 +155,19 @@ def process_item(item):
     return count
 
 
+width = (end - start).days + 1
+height = 24 * 60
+
+scatterplot = Image.new('RGBA', (width, height), background)
+pao = scatterplot.load()
+
+total_count = 0
+
+dayvolume = [0,] * width
+minutevolume = [0,] * height
+
+print("Drawing scatterplot")
+
 for item in args:
     total_count += process_item(item)
 
@@ -181,7 +181,7 @@ for x, d in enumerate(dayvolume):
     davg = sum(dayvolume[x-3:x+4]) / 7
     dayvolumedraw.line(((x,max_per_day  - davg), (x, max_per_day)), fill=background)
     if d == max_per_day:
-        print('%d emails sent on %d' % (d, start + datetime.timedelta(x)))
+        print('%d emails sent on %s' % (d, start + datetime.timedelta(x)))
 
 print("Drawing minute volume plot")
 
