@@ -43,39 +43,6 @@ parser.add_option('--noninteractive', dest='interactive'     , default=True, act
     help="disable progress meter")
 
 
-(options, args) = parser.parse_args()
-
-
-if not args:
-    sys.exit("At least one maildir is required")
-
-# Manage options
-if options.font_path is not None:
-    font = ImageFont.truetype(options.font_path, options.font_size)
-else:
-    font = ImageFont.load_default()
-
-if not options.start:
-    sys.exit('-s option for start date in YYYY-MM-DD format is required')
-
-start = options.start
-if not options.end:
-    tomorrow = datetime.date.today() + datetime.timedelta(1)
-    end = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, 0)
-else:
-    end = options.end
-
-
-display_timezone = None
-if options.display_timezone:
-    try:
-        from pytz import timezone, utc
-        display_timezone = timezone(options.display_timezone)
-        start = display_timezone.localize(start)
-        end = display_timezone.localize(end)
-    except ImportError:
-        print("Install pytz (http://pytz.sourceforge.net/) for timezone-aware charts.")
-
 
 # Colors
 white = (0xff, 0xff, 0xff, 0xff)
@@ -134,7 +101,7 @@ def parse_item(item):
         return process_maildir(item)
 
 
-def process_item(item):
+def process_item(item, display_timezone, pao, dayvolume, minutevolume):
     print('Reading messages in %r' % item)
     length, iterator = parse_item(item)
     count = 0
@@ -162,91 +129,128 @@ def process_item(item):
     return count
 
 
-width = (end - start).days + 1
-height = 24 * 60
+def main():
+    width = (end - start).days + 1
+    height = 24 * 60
 
-scatterplot = Image.new('RGBA', (width, height), background)
-pao = scatterplot.load()
+    scatterplot = Image.new('RGBA', (width, height), background)
+    pao = scatterplot.load()
 
-total_count = 0
+    total_count = 0
 
-dayvolume = [0,] * width
-minutevolume = [0,] * height
+    dayvolume = [0,] * width
+    minutevolume = [0,] * height
 
-print("Drawing scatterplot")
+    print("Drawing scatterplot")
 
-for item in args:
-    total_count += process_item(item)
+    for item in args:
+        total_count += process_item(item, display_timezone, pao, dayvolume, minutevolume)
 
-print("Drawing day volume plot")
+    print("Drawing day volume plot")
 
-max_per_day = max(dayvolume)
-dayvolumeplot = Image.new('RGBA', (width, max_per_day), white)
-dayvolumedraw = ImageDraw.Draw(dayvolumeplot)
-for x, d in enumerate(dayvolume):
-    dayvolumedraw.line(((x,max_per_day  - d), (x, max_per_day)), fill=red)
-    davg = sum(dayvolume[x-3:x+4]) / 7
-    dayvolumedraw.line(((x,max_per_day  - davg), (x, max_per_day)), fill=background)
-    if d == max_per_day:
-        print('%d emails sent on %s' % (d, start + datetime.timedelta(x)))
+    max_per_day = max(dayvolume)
+    dayvolumeplot = Image.new('RGBA', (width, max_per_day), white)
+    dayvolumedraw = ImageDraw.Draw(dayvolumeplot)
+    for x, d in enumerate(dayvolume):
+        dayvolumedraw.line(((x,max_per_day  - d), (x, max_per_day)), fill=red)
+        davg = sum(dayvolume[x-3:x+4]) / 7
+        dayvolumedraw.line(((x,max_per_day  - davg), (x, max_per_day)), fill=background)
+        if d == max_per_day:
+            print('%d emails sent on %s' % (d, start + datetime.timedelta(x)))
 
-print("Drawing minute volume plot")
+    print("Drawing minute volume plot")
 
-max_per_min = max(minutevolume)
-minvolumeplot = Image.new('RGBA', (max_per_min, height), white)
-minvolumedraw = ImageDraw.Draw(minvolumeplot)
-for y, m in enumerate(minutevolume):
-    minvolumedraw.line(((0,y), (m, y)), fill=red)
-    mrange = minutevolume[y-5:y+6]
-    if (y<5):
-        mrange = minutevolume[y-5:] + minutevolume[:y+6]
-    if (height-y < 6):
-        mrange += minutevolume[:(y + 6) % height]
+    max_per_min = max(minutevolume)
+    minvolumeplot = Image.new('RGBA', (max_per_min, height), white)
+    minvolumedraw = ImageDraw.Draw(minvolumeplot)
+    for y, m in enumerate(minutevolume):
+        minvolumedraw.line(((0,y), (m, y)), fill=red)
+        mrange = minutevolume[y-5:y+6]
+        if (y<5):
+            mrange = minutevolume[y-5:] + minutevolume[:y+6]
+        if (height-y < 6):
+            mrange += minutevolume[:(y + 6) % height]
 
-    mavg = sum(mrange) / 11
-    minvolumedraw.line(((0,y), (mavg, y)), fill=background)
-
-
-# Composite scatter and volume plots together
-offset = 32
-image = Image.new('RGBA', (width + max_per_min + offset*3, height + max_per_day + offset*3), (0xff, 0xff, 0xff, 0xff))
-image.paste(scatterplot, (offset, offset))
-image.paste(dayvolumeplot, (offset, height + offset*2))
-image.paste(minvolumeplot, (offset * 2 + width, offset))
+        mavg = sum(mrange) / 11
+        minvolumedraw.line(((0,y), (mavg, y)), fill=background)
 
 
-d = ImageDraw.Draw(image)
+    # Composite scatter and volume plots together
+    offset = 32
+    image = Image.new('RGBA', (width + max_per_min + offset*3, height + max_per_day + offset*3), (0xff, 0xff, 0xff, 0xff))
+    image.paste(scatterplot, (offset, offset))
+    image.paste(dayvolumeplot, (offset, height + offset*2))
+    image.paste(minvolumeplot, (offset * 2 + width, offset))
 
-# Draw ticks and labels for years
-y = start.year
-while y <= end.year:
-    year = datetime.datetime(y, 1, 1)
-    if display_timezone is not None:
-        year = utc.localize(year).astimezone(display_timezone)
-    x = (year - start).days + offset
-    if offset <= x <= width:
-        d.line(((x, 0              ), (x,          offset  )), fill=black)
-        d.line(((x, height + offset), (x, height + offset*2)), fill=black)
-    ts = font.getsize(str(y))
-    x += 182
-    if offset <= x - ts[0]/2 and x + ts[0]/2 <= width:
-        d.text((x - ts[0]/2,          offset / 2   - ts[1]/2), str(y), fill=black, font=font)
-        d.text((x - ts[0]/2, height + offset * 1.5 - ts[1]/2), str(y), fill=black, font=font)
-    y += 1
 
-# Draw ticks and labels for minutes
-for h in xrange(25):
-    y = offset+h*60
-    if h == 24:
-        y -= 1
-    d.line(((0             , y), (offset          , y)), fill=black)
-    d.line(((width + offset, y), (width + offset*2, y)), fill=black)
-    if h == 24:
-        break
-    hour = str((h-1) % 12 + 1)
-    ts = font.getsize(hour)
-    d.text((        offset*0.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black, font=font)
-    d.text((width + offset*1.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black, font=font)
+    d = ImageDraw.Draw(image)
 
-image.save(options.output_path)
-print("%d total emails sent." % total_count)
+    # Draw ticks and labels for years
+    y = start.year
+    while y <= end.year:
+        year = datetime.datetime(y, 1, 1)
+        if display_timezone is not None:
+            year = utc.localize(year).astimezone(display_timezone)
+        x = (year - start).days + offset
+        if offset <= x <= width:
+            d.line(((x, 0              ), (x,          offset  )), fill=black)
+            d.line(((x, height + offset), (x, height + offset*2)), fill=black)
+        ts = font.getsize(str(y))
+        x += 182
+        if offset <= x - ts[0]/2 and x + ts[0]/2 <= width:
+            d.text((x - ts[0]/2,          offset / 2   - ts[1]/2), str(y), fill=black, font=font)
+            d.text((x - ts[0]/2, height + offset * 1.5 - ts[1]/2), str(y), fill=black, font=font)
+        y += 1
+
+    # Draw ticks and labels for minutes
+    for h in xrange(25):
+        y = offset+h*60
+        if h == 24:
+            y -= 1
+        d.line(((0             , y), (offset          , y)), fill=black)
+        d.line(((width + offset, y), (width + offset*2, y)), fill=black)
+        if h == 24:
+            break
+        hour = str((h-1) % 12 + 1)
+        ts = font.getsize(hour)
+        d.text((        offset*0.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black, font=font)
+        d.text((width + offset*1.5 - ts[0]/2, y+30-ts[1]/2), hour, fill=black, font=font)
+
+    image.save(options.output_path)
+    print("%d total emails sent." % total_count)
+
+
+if __name__ == '__main__':
+    (options, args) = parser.parse_args()
+
+    if not args:
+        sys.exit("At least one maildir is required")
+
+    # Manage options
+    if options.font_path is not None:
+        font = ImageFont.truetype(options.font_path, options.font_size)
+    else:
+        font = ImageFont.load_default()
+
+    if not options.start:
+        sys.exit('-s option for start date in YYYY-MM-DD format is required')
+
+    start = options.start
+    if not options.end:
+        tomorrow = datetime.date.today() + datetime.timedelta(1)
+        end = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, 0)
+    else:
+        end = options.end
+
+
+    display_timezone = None
+    if options.display_timezone:
+        try:
+            from pytz import timezone, utc
+            display_timezone = timezone(options.display_timezone)
+            start = display_timezone.localize(start)
+            end = display_timezone.localize(end)
+        except ImportError:
+            print("Install pytz (http://pytz.sourceforge.net/) for timezone-aware charts.")
+
+    main()
