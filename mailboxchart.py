@@ -110,8 +110,9 @@ def iterate_imap(email, host, mailbox):
     imap_mailbox.login(email, getpass.getpass("Password for %s: " % email))
     imap_mailbox.select(mailbox, True)
     typ, data = imap_mailbox.search(None, 'ALL')
-    for num in data[0].split():
-        typ, data = imap_mailbox.fetch(num, '(INTERNALDATE)')
+    message_ids = data[0].split()
+    for mid in message_ids:
+        typ, data = imap_mailbox.fetch(mid, '(INTERNALDATE)')
         date_str = data[0].split('"')[1]
         d = datetime.datetime.strptime(date_str, '%d-%b-%Y %H:%M:%S +0000')
         yield d
