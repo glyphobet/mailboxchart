@@ -136,7 +136,7 @@ def iterate_item(item):
         return iterate_maildir(item)
 
 
-for item in args:
+def process_item(item):
     print('Reading messages in %r' % item)
     length, items = iterate_item(item)
     count = 0
@@ -157,11 +157,15 @@ for item in args:
             sys.stdout.flush()
 
         count += 1
-        total_count += 1
 
     if not options.quiet:
         sys.stdout.write('\n')
 
+    return count
+
+
+for item in args:
+    total_count += process_item(item)
 
 print("Drawing day volume plot")
 
