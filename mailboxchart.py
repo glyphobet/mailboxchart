@@ -88,14 +88,14 @@ point = white
 
 
 
-def iterate_maildir(maildir):
+def process_maildir(maildir):
     b = Maildir(maildir)
-    def iter():
+    def iterate_maildir():
         for m in b.itervalues():
             t = m.getdate_tz('Date')
             d = datetime.datetime.fromtimestamp(time.mktime(t[:9])) - datetime.timedelta(seconds=t[9])
             yield d
-    return len(b), iter()
+    return len(b), iterate_maildir()
 
 
 @contextmanager
@@ -105,7 +105,7 @@ def imap_closer(imap_mailbox):
     imap_mailbox.logout()
 
 
-def iterate_imap(account, host, mailbox):
+def process_imap(account, host, mailbox):
     try:
         imap_mailbox = IMAP4_SSL(host)
         imap_mailbox.login(account, getpass.getpass("Password for %s: " % account))
@@ -115,30 +115,30 @@ def iterate_imap(account, host, mailbox):
         sys.stderr.write(str(e) + '\n')
         return 0, []
     message_ids = data[0].split()
-    def iter():
+    def iterate_imap():
         with imap_closer(imap_mailbox):
             for mid in message_ids:
                 typ, data = imap_mailbox.fetch(mid, '(INTERNALDATE)')
                 date_str = data[0].split('"')[1]
                 d = datetime.datetime.strptime(date_str, '%d-%b-%Y %H:%M:%S +0000')
                 yield d
-    return len(message_ids), iter()
+    return len(message_ids), iterate_imap()
 
 
-def iterate_item(item):
+def parse_item(item):
     if item.startswith('imaps://'):
         protocol, empty, email, mailbox = item.split('/', 3)
         account, host = email.split('@', 1)
-        return iterate_imap(account, host, mailbox)
+        return process_imap(account, host, mailbox)
     else:
-        return iterate_maildir(item)
+        return process_maildir(item)
 
 
 def process_item(item):
     print('Reading messages in %r' % item)
-    length, items = iterate_item(item)
+    length, iterator = parse_item(item)
     count = 0
-    for d in items:
+    for d in iterator:
         if display_timezone is not None:
             d = utc.localize(d).astimezone(display_timezone)
         if d < start or d > end:
