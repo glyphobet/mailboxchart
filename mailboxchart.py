@@ -107,10 +107,14 @@ def iterate_maildir(maildir):
 
 
 def iterate_imap(account, host, mailbox):
-    imap_mailbox = imaplib.IMAP4_SSL(host)
-    imap_mailbox.login(account, getpass.getpass("Password for %s: " % account))
-    imap_mailbox.select(mailbox, True)
-    typ, data = imap_mailbox.search(None, 'ALL')
+    try:
+        imap_mailbox = imaplib.IMAP4_SSL(host)
+        imap_mailbox.login(account, getpass.getpass("Password for %s: " % account))
+        imap_mailbox.select(mailbox, True)
+        typ, data = imap_mailbox.search(None, 'ALL')
+    except imaplib.error, e:
+        print(e)
+        return 0, []
     message_ids = data[0].split()
     def iter():
         for mid in message_ids:
